@@ -39,3 +39,10 @@ A custom made 3D printed frame with tall camera stand - shared soon
 :satellite: [[Ngnix]](https://nginx.org/) server configured as reverse proxy to both Python backend and MediaMTX server
 
 :earth_africa: [[Ngrok]](https://ngrok.com/) web hosting
+
+<div style="display: inline-block;">
+<img src="img/photo1.jpg" width="400"/>
+<br>
+<img src="img/photo3.jpg" width="400"/>
+</div>
+<img src="img/photo2.jpg" width="259"/>
