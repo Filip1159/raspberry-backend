@@ -40,9 +40,4 @@ A custom made 3D printed frame with tall camera stand - shared soon
 
 :earth_africa: [[Ngrok]](https://ngrok.com/) web hosting
 
-<div style="display: inline-block;">
-<img src="img/photo1.jpg" width="400"/>
-<br>
-<img src="img/photo3.jpg" width="400"/>
-</div>
-<img src="img/photo2.jpg" width="259"/>
+<img src="img/all.jpg"/>
