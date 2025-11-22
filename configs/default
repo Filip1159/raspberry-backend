@@ -1,0 +1,43 @@
+server {
+    listen 5000;
+
+    server_name localhost;
+
+    root /home/fwisn/Documents/raspberry-ui/dist/raspberry-ui/browser;
+    index index.html;
+
+    location /flask {
+        rewrite ^/flask(.*)$ $1 break;
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /cam1 {
+        proxy_pass http://127.0.0.1:8889;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Pozwól na wszystkie metody HTTP
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+
+        # Zezwalaj na wszystkie metody
+        proxy_pass_request_headers on;
+
+        # Dla RTSP
+        proxy_buffering off;
+        proxy_request_buffering off;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
