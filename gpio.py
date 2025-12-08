@@ -17,9 +17,18 @@ servo1.start(7.5)
 servo2 = HardwarePWM(pwm_channel=1, hz=50, chip=0)
 servo2.start(7.5)
 
+old_servo_pwm = 7.5
+
 def set_servo_angle(angle):  #    - duty = 0.5ms --- 2.5ms, T = 20ms, % = 2.5 --- 12.5 
     pwm_value = 2.5 + angle / 180 * 10
     servo1.change_duty_cycle(pwm_value)
+
+def set_servo_angle_smooth(angle):
+    global old_servo_pwm
+    pwm_value = 2.5 + angle / 180 * 10
+    diff = pwm_value - old_servo_pwm
+    old_servo_pwm += diff / 10
+    servo1.change_duty_cycle(old_servo_pwm)
 
 def set_servo2_angle(angle):
     pwm_value = 2.5 + angle / 180 * 10
