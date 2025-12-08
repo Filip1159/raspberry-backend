@@ -1,4 +1,6 @@
 from gpiozero import LED
+from gpiozero import AngularServo
+from rpi_hardware_pwm import HardwarePWM
 from Keypad import Keypad
 from threading import Timer
 from datetime import datetime
@@ -9,6 +11,14 @@ red = LED(14)
 lcd = LCD(21, 20, 26, 19, 13, 6)
 buzzer = LED(15)
 lcd_backlight = LED(18)
+
+# servo = AngularServo(12, min_angle=0, max_angle=180, min_pulse_width=0.8/1000, max_pulse_width=2.1/1000)
+servo = HardwarePWM(pwm_channel=0, hz=50, chip=0)
+servo.start(7.5)
+
+def set_servo_angle(angle):  #    - duty = 0.5ms --- 2.5ms, T = 20ms, % = 2.5 --- 12.5 
+    pwm_value = 2.5 + angle / 180 * 10
+    servo.change_duty_cycle(pwm_value)
 
 lcd.write_string("Hello Raspberry")
 now = datetime.now()
