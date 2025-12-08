@@ -1,6 +1,6 @@
 from multiprocessing import Process, Queue
 from server import server_loop, run_server
-from gpio import gpio_loop, set_servo_angle
+from gpio import gpio_loop, set_servo_angle, set_servo2_angle
 from time import sleep
 from threading import Timer
 
@@ -14,6 +14,7 @@ def app_loop():
     print(key)
     if key != 'x':
         set_servo_angle(50 + int(key) * 10)
+        set_servo2_angle(50 + int(key) * 10)
     server_loop(queue)
 
 
