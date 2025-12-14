@@ -6,7 +6,7 @@ from time import sleep
 from LCD import LCD
 
 red = LED(14)
-lcd = LCD(21, 20, 26, 19, 13, 6)
+lcd = LCD(21, 20, 26, 19, 6, 5)
 buzzer = LED(15)
 lcd_backlight = LED(18)
 

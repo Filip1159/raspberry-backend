@@ -36,3 +36,13 @@ sudo systemctl enable nginx
 # Ngrok
 
 [[Raspberry Pi installation guide]](https://ngrok.com/docs/guides/device-gateway/raspberry-pi)
+
+# Hardware PWM
+
+Required for servos to work. Hardware PWM provides smooth movement, in contrast to the software PWM which causes much jitter.
+
+Add the following line at the end of the `/boot/firmware/config.txt` file:
+
+```
+dtoverlay=pwm-2chan,pin=12,func=4,pin2=13,func2=4
+```

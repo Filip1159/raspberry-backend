@@ -8,8 +8,9 @@ queue = Queue()
 
 
 def app_loop():
-    Timer(0.5, app_loop).start()
-    queue.put(f'KEYPAD: {gpio_loop()}')
+    Timer(0.05, app_loop).start()
+    key = gpio_loop()
+    queue.put(f'KEYPAD: {key}')
     server_loop(queue)
 
 
