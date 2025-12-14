@@ -6,14 +6,15 @@ from flask_jwt_extended import (
     jwt_required, get_jwt_identity
 )
 
-import datetime
 import jwt
 from jwcrypto import jwk
 import json
 import os
 
-from threading import Timer
-from subprocess import Popen, PIPE, STDOUT
+from servos_controller import ServosController
+
+
+servos = ServosController(0, 1)
 
 KEY_PRIVATE_PATH = "private_key.pem"
 KEY_PUBLIC_PATH = "public_key.pem"
@@ -27,16 +28,11 @@ with open(KEY_PRIVATE_PATH, "rb") as f:
 with open(KEY_PUBLIC_PATH, "rb") as f:
     public_pem = f.read()
 
-# ------------------------------------------------------------
-# 2) Utwórz JWK (publiczny) na podstawie klucza publicznego
-# ------------------------------------------------------------
 public_key_jwk = jwk.JWK.from_pem(public_pem)
 
-# jwcrypto sam doda "kid" jeśli go nie ma — idealne dla MediaMTX
 public_jwk_json = json.loads(public_key_jwk.export_public())
-kid = public_jwk_json["kid"]   # klucz będzie używany w nagłówku JWT
+kid = public_jwk_json["kid"]
 
-cam_process = None
 app = Flask('rpi_server')
 
 app.config["JWT_SECRET_KEY"] = "super-secret-key"
@@ -45,17 +41,11 @@ jwt_manager = JWTManager(app)
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# ------------------------------------------------------------
-# 3) JWKS endpoint dla MediaMTX
-# ------------------------------------------------------------
 @app.route("/.well-known/jwks.json")
 def jwks():
     return jsonify({"keys": [public_jwk_json]})
 
 
-# ------------------------------------------------------------
-# 4) Endpoint logowania — generujemy JWT RS256 z kid
-# ------------------------------------------------------------
 @app.route("/login", methods=["POST"])
 def login():
     data = request.get_json() or {}
@@ -68,7 +58,6 @@ def login():
     now = datetime.datetime.utcnow()
     exp = now + datetime.timedelta(hours=12)
 
-    # Example MediaMTX permissions — dostosuj jak chcesz
     permissions = [
         {"action": "publish", "path": "cam1"},
         {"action": "read", "path": "cam1"}
@@ -99,47 +88,15 @@ def login():
         "expires_at": exp.isoformat()
     })
 
-
-@app.route("/protected", methods=["GET"])
-@jwt_required()
-def protected():
-    current_user = get_jwt_identity()
-    return jsonify(logged_in_as=current_user), 200
-    
-
-@app.route('/start-cam')
-def start():
-    global cam_process
-    if cam_process is None:
-        cam_process = Popen('./mediamtx', cwd='/mediamtx', stdout=PIPE, stderr=STDOUT)
-        return 'camera started'
-    else:
-        return 'camera already started'
-
-
-@app.route('/stop-cam')
-def stop():
-    global cam_process
-    if (cam_process is not None):
-        cam_process.kill()
-        cam_process.wait()
-        cam_process = None
-        return 'camera stopped'
-    else:
-        return 'camera not started'
-
-# Obsługa połączeń Socket.IO
 @socketio.on('connect')
 def handle_connect():
     print('Client connected')
     send('Connected to Flask SocketIO server!')
 
-# Obsługa wiadomości
 @socketio.on('message')
 def handle_message(msg):
-    print('Received message:', msg)
-    send(f'Echo: {msg}', broadcast=True)
-
+    global servos
+    servos.move(msg)
 
 def server_loop(queue):
     try:
