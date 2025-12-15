@@ -2,9 +2,10 @@ import asyncio
 import json
 import os
 import threading
+from time import sleep
 from typing import List, Dict
 from datetime import datetime, timedelta
-from melodies import play
+from melody_player import MelodyPlayer
 
 
 ALARMS_FILE = './alarms.json'
@@ -29,18 +30,13 @@ def load_schedule() -> List[Dict]:
         return json.load(f)
 
 
-def alarm_action():
-    print("⏰ Alarm executed at:", datetime.now())
-    play()
-
-
 class AlarmManager:
     def __init__(self):
         self.__thread: threading.Thread | None = None
         self.__lock = threading.Lock()
         self.__stop_event = threading.Event()
         self.__schedule: List[Dict] = []
-        self.__action: Callable[[], asyncio.Future] = alarm_action
+        self.__player = MelodyPlayer(15)
         self.reload()
 
 
@@ -49,19 +45,18 @@ class AlarmManager:
             self.__stop_current_thread()
         
             self.__schedule = load_schedule()
-            next_run = self.__find_next_run(self.__schedule)
+            next_run, alarm = self.__find_next_run(self.__schedule)
             self.__stop_event.clear()
-            print(f"Next run: {next_run}")
 
             self.__thread = threading.Thread(
                 target=self.__run_and_reschedule,
-                args=(next_run,),
+                args=(next_run, alarm, ),
                 daemon=True
             )
             self.__thread.start()
 
     
-    def __find_next_run(self, schedule: List[Dict]) -> datetime:
+    def __find_next_run(self, schedule: List[Dict]) -> (datetime, Dict):
         now = datetime.now()
         candidates = []
 
@@ -80,12 +75,12 @@ class AlarmManager:
             if run_time <= now:
                 run_time += timedelta(days=7)
 
-            candidates.append(run_time)
+            candidates.append((run_time, entry))
 
-        return min(candidates)
+        return min(candidates, key = lambda t: t[0])
 
 
-    def __run_and_reschedule(self, run_at: datetime):
+    def __run_and_reschedule(self, run_at: datetime, alarm: Dict):
         while not self.__stop_event.is_set():
             delay = (run_at - datetime.now()).total_seconds()
 
@@ -96,16 +91,17 @@ class AlarmManager:
 
             threading.Thread(
                 target=self.__run_action_safe,
+                args=(alarm, ),
                 daemon=True
             ).start()
 
             with self.__lock:
-                run_at = self.__find_next_run(self.__schedule)
+                run_at, alarm = self.__find_next_run(self.__schedule)
     
 
-    def __run_action_safe(self):
+    def __run_action_safe(self, alarm: Dict):
         try:
-            self.__action()
+            self.__player.play(alarm['melody'])
         except Exception as e:
             print("Alarm action failed:", e)
 

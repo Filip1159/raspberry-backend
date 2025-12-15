@@ -1,12 +1,14 @@
 [
     {
         "day": "monday",
-        "hour": 19,
-        "minute": 21
+        "hour": 23,
+        "minute": 42,
+        "melody": "PIRATES"
     },
     {
         "day": "monday",
-        "hour": 18,
-        "minute": 0
+        "hour": 23,
+        "minute": 43,
+        "melody": "NOKIA"
     }
 ]
