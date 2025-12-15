@@ -88,6 +88,38 @@ def login():
         "expires_at": exp.isoformat()
     })
 
+
+@app.route("/alarm", methods=["POST"])
+@jwt_required()
+def set_alarm():
+    data = request.get_json()
+
+    if not isinstance(data, list):
+        return jsonify({"error": "Body must be a list"}), 400
+
+    for index, item in enumerate(data):
+        if not isinstance(item, dict):
+            return jsonify({"error": f"Item at index {index} is not an object"}), 400
+
+        day = item.get("day")
+        hour = item.get("hour")
+        minute = item.get("minute")
+
+        if day not in ALLOWED_DAYS:
+            return jsonify({"error": f"Invalid day at index {index}"}), 400
+
+        if not isinstance(hour, int) or not (0 <= hour <= 23):
+            return jsonify({"error": f"Invalid hour at index {index}"}), 400
+
+        if not isinstance(minute, int) or not (0 <= minute <= 59):
+            return jsonify({"error": f"Invalid minute at index {index}"}), 400
+
+    with open("alarm_schedule.txt", "w", encoding="utf-8") as file:
+        json.dump(data, file, ensure_ascii=False, indent=2)
+
+    return 200
+
+
 @socketio.on('connect')
 def handle_connect():
     print('Client connected')
