@@ -3,12 +3,14 @@
         "day": "monday",
         "hour": 23,
         "minute": 42,
-        "melody": "PIRATES"
+        "melody": "PIRATES",
+        "enabled": true
     },
     {
-        "day": "monday",
+        "day": "tuesday",
         "hour": 23,
         "minute": 43,
-        "melody": "NOKIA"
+        "melody": "NOKIA",
+        "enabled": true
     }
 ]

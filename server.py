@@ -5,11 +5,13 @@ from flask_jwt_extended import (
     JWTManager, create_access_token,
     jwt_required, get_jwt_identity
 )
+import logging
 
 import jwt
 from jwcrypto import jwk
 import json
 import os
+import datetime
 
 from servos_controller import ServosController
 
@@ -35,7 +37,10 @@ kid = public_jwk_json["kid"]
 
 app = Flask('rpi_server')
 
-app.config["JWT_SECRET_KEY"] = "super-secret-key"
+app.config["JWT_ALGORITHM"] = "RS256"
+app.config["JWT_PUBLIC_KEY"] = open(KEY_PUBLIC_PATH).read()
+
+
 jwt_manager = JWTManager(app)
 
 CORS(app)
@@ -89,9 +94,9 @@ def login():
     })
 
 
-@app.route("/alarm", methods=["POST"])
+@app.route("/alarms", methods=["POST"])
 @jwt_required()
-def set_alarm():
+def set_alarms():
     data = request.get_json()
 
     if not isinstance(data, list):
@@ -114,10 +119,37 @@ def set_alarm():
         if not isinstance(minute, int) or not (0 <= minute <= 59):
             return jsonify({"error": f"Invalid minute at index {index}"}), 400
 
-    with open("alarm_schedule.txt", "w", encoding="utf-8") as file:
+    with open("alarms.json", "w", encoding="utf-8") as file:
         json.dump(data, file, ensure_ascii=False, indent=2)
 
     return 200
+
+
+@app.route("/alarms", methods=["GET"])
+@jwt_required()
+def get_alarms():
+    with open("alarms.json", "r", encoding="utf-8") as file:
+        print('file opened')
+        c = file.read()
+        print(c)
+        return c, 200
+
+
+@jwt_manager.unauthorized_loader
+def unauthorized(reason):
+    return jsonify(error="unauthorized", reason=reason), 401
+
+@jwt_manager.invalid_token_loader
+def invalid(reason):
+    return jsonify(error="invalid_token", reason=reason), 422
+
+@jwt_manager.expired_token_loader
+def expired(jwt_header, jwt_payload):
+    return jsonify(error="token_expired"), 401
+
+@jwt_manager.needs_fresh_token_loader
+def fresh_required(jwt_header, jwt_payload):
+    return jsonify(error="fresh_token_required"), 401
 
 
 @socketio.on('connect')
