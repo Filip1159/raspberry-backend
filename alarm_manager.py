@@ -36,7 +36,7 @@ class AlarmManager:
         self.__lock = threading.Lock()
         self.__stop_event = threading.Event()
         self.__schedule: List[Dict] = []
-        self.__player = MelodyPlayer(15)
+        self.player = MelodyPlayer(15)
         self.reload()
 
 
@@ -110,3 +110,6 @@ class AlarmManager:
         if self.__thread and self.__thread.is_alive():
             self.__stop_event.set()
             self.__thread.join()
+
+
+alarm_manager = AlarmManager()

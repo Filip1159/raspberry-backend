@@ -3,11 +3,8 @@ from server import server_loop, run_server
 from gpio import gpio_loop
 from time import sleep
 from threading import Timer
-from alarm_manager import AlarmManager
 
 queue = Queue()
-
-alarm_manager = AlarmManager()
 
 
 def app_loop():

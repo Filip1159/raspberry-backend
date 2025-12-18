@@ -15,6 +15,9 @@ import datetime
 
 from servos_controller import ServosController
 
+from melody_player import MELODIES
+
+from alarm_manager import alarm_manager
 
 servos = ServosController(0, 1)
 
@@ -109,8 +112,10 @@ def set_alarms():
         day = item.get("day")
         hour = item.get("hour")
         minute = item.get("minute")
+        melody = item.get("melody")
+        enabled = item.get("enabled")
 
-        if day not in ALLOWED_DAYS:
+        if day not in ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]:
             return jsonify({"error": f"Invalid day at index {index}"}), 400
 
         if not isinstance(hour, int) or not (0 <= hour <= 23):
@@ -119,20 +124,32 @@ def set_alarms():
         if not isinstance(minute, int) or not (0 <= minute <= 59):
             return jsonify({"error": f"Invalid minute at index {index}"}), 400
 
+        if melody not in MELODIES.keys():
+            return jsonify({"error": f"Invalid melody at index {index}: {melody}"}), 400
+
+        if not isinstance(enabled, bool):
+            return jsonify({"error": f"Invalid enabled value at index {index}"}), 400
+
     with open("alarms.json", "w", encoding="utf-8") as file:
         json.dump(data, file, ensure_ascii=False, indent=2)
 
-    return 200
+    return '', 201
 
 
 @app.route("/alarms", methods=["GET"])
 @jwt_required()
 def get_alarms():
     with open("alarms.json", "r", encoding="utf-8") as file:
-        print('file opened')
-        c = file.read()
-        print(c)
-        return c, 200
+        return file.read(), 200
+
+
+@app.route("/play", methods=["POST"])
+@jwt_required()
+def play():
+    data = request.get_json()
+    melody = data.get("melody")
+    alarm_manager.player.play(melody)
+    return 'ok', 200
 
 
 @jwt_manager.unauthorized_loader

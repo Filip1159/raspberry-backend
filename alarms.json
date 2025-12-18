@@ -1,16 +1,51 @@
 [
-    {
-        "day": "monday",
-        "hour": 23,
-        "minute": 42,
-        "melody": "PIRATES",
-        "enabled": true
-    },
-    {
-        "day": "tuesday",
-        "hour": 23,
-        "minute": 43,
-        "melody": "NOKIA",
-        "enabled": true
-    }
+  {
+    "day": "monday",
+    "hour": 9,
+    "minute": 0,
+    "melody": "Pirates",
+    "enabled": true
+  },
+  {
+    "day": "tuesday",
+    "hour": 7,
+    "minute": 30,
+    "melody": "Nokia",
+    "enabled": true
+  },
+  {
+    "day": "wednesday",
+    "hour": 7,
+    "minute": 30,
+    "melody": "Are you sleeping",
+    "enabled": true
+  },
+  {
+    "day": "thursday",
+    "hour": 9,
+    "minute": 0,
+    "melody": "Twinkle",
+    "enabled": true
+  },
+  {
+    "day": "friday",
+    "hour": 9,
+    "minute": 2,
+    "melody": "Pink panther",
+    "enabled": true
+  },
+  {
+    "day": "saturday",
+    "hour": 12,
+    "minute": 0,
+    "melody": "Are you sleeping",
+    "enabled": false
+  },
+  {
+    "day": "sunday",
+    "hour": 12,
+    "minute": 0,
+    "melody": "Panic",
+    "enabled": false
+  }
 ]
