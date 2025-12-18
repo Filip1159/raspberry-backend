@@ -87,3 +87,6 @@ class ServosController:
         if self.horizontal_servo_angle > H_CENTER - MAX_DEVIATION:
             self.horizontal_servo_angle -= diff
             self.horizontal_servo.change_duty_cycle(to_pwm(self.horizontal_servo_angle))
+
+
+servos_controller = ServosController(0, 1)

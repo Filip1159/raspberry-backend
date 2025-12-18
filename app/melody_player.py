@@ -1,7 +1,5 @@
 from gpiozero import Buzzer
-from gpiozero.tones import Tone
 from time import sleep
-from typing import List, Tuple
 
 
 NOTE_TO_FREQ = {
@@ -221,3 +219,6 @@ class MelodyPlayer():
             sleep(halveWaveTime)
             self.__buzzer.off()
             sleep(halveWaveTime)
+
+
+melody_player = MelodyPlayer(15)

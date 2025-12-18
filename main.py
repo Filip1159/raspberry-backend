@@ -1,8 +1,11 @@
 from multiprocessing import Process, Queue
-from server import server_loop, run_server
-from gpio import gpio_loop
-from time import sleep
 from threading import Timer
+from time import sleep
+
+from app.controller.socket_controller import server_loop
+from app.gpio.gpio import gpio_loop
+from app.server import run_server
+
 
 queue = Queue()
 

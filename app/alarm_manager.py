@@ -1,15 +1,14 @@
-import asyncio
+from datetime import datetime, timedelta
 import json
-import os
+from os import path
 import threading
 from time import sleep
 from typing import List, Dict
-from datetime import datetime, timedelta
-from melody_player import MelodyPlayer
+
+from app.melody_player import melody_player
 
 
-ALARMS_FILE = './alarms.json'
-
+ALARMS_FILE = './resources/alarms.json'
 
 DAY_TO_INT = {
     "monday": 0,
@@ -23,7 +22,7 @@ DAY_TO_INT = {
 
 
 def load_schedule() -> List[Dict]:
-    if not (os.path.exists(ALARMS_FILE) and os.path.exists(ALARMS_FILE)):
+    if not path.exists(ALARMS_FILE):
         raise FileNotFoundError("Alarms config file doesn't exist")
 
     with open(ALARMS_FILE, "r") as f:
@@ -36,7 +35,7 @@ class AlarmManager:
         self.__lock = threading.Lock()
         self.__stop_event = threading.Event()
         self.__schedule: List[Dict] = []
-        self.player = MelodyPlayer(15)
+        self.player = melody_player
         self.reload()
 
 
