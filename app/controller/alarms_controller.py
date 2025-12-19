@@ -41,7 +41,7 @@ def set_alarms():
         if not isinstance(enabled, bool):
             return jsonify({"error": f"Invalid enabled value at index {index}"}), 400
 
-    with open("alarms.json", "w", encoding="utf-8") as file:
+    with open(ALARMS_FILE, "w", encoding="utf-8") as file:
         json.dump(data, file, ensure_ascii=False, indent=2)
 
     return '', 201

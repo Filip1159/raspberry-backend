@@ -3,49 +3,49 @@
     "day": "monday",
     "hour": 9,
     "minute": 0,
-    "melody": "Pirates",
-    "enabled": true
+    "enabled": true,
+    "melody": "Pirates"
   },
   {
     "day": "tuesday",
     "hour": 7,
     "minute": 30,
-    "melody": "Nokia",
-    "enabled": true
+    "enabled": true,
+    "melody": "Nokia"
   },
   {
     "day": "wednesday",
     "hour": 7,
     "minute": 30,
-    "melody": "Are you sleeping",
-    "enabled": true
+    "enabled": true,
+    "melody": "Are you sleeping"
   },
   {
     "day": "thursday",
     "hour": 9,
     "minute": 0,
-    "melody": "Twinkle",
-    "enabled": true
+    "enabled": true,
+    "melody": "Twinkle"
   },
   {
     "day": "friday",
     "hour": 9,
-    "minute": 2,
-    "melody": "Pink panther",
-    "enabled": true
+    "minute": 0,
+    "enabled": true,
+    "melody": "Pink panther"
   },
   {
     "day": "saturday",
     "hour": 12,
     "minute": 0,
-    "melody": "Are you sleeping",
-    "enabled": false
+    "enabled": false,
+    "melody": "Are you sleeping"
   },
   {
     "day": "sunday",
     "hour": 12,
     "minute": 0,
-    "melody": "Panic",
-    "enabled": false
+    "enabled": false,
+    "melody": "Panic"
   }
 ]
