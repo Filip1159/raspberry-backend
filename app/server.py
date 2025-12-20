@@ -4,6 +4,7 @@ from flask_jwt_extended import JWTManager
 
 from app.controller.alarms_controller import alarms
 from app.controller.auth_controller import auth
+from app.controller.greetings_controller import greetings
 from app.controller.socket_controller import socketio
 from app.secret_provider import KEY_PUBLIC_PATH
 
@@ -16,6 +17,7 @@ CORS(app)
 
 app.register_blueprint(alarms)
 app.register_blueprint(auth)
+app.register_blueprint(greetings)
 socketio.init_app(app)
 
 
