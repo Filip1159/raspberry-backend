@@ -1,29 +1,37 @@
 from datetime import datetime
-from gpiozero import LED
+from gpiozero import Button, LED, PWMLED, RotaryEncoder
+from RPLCD.i2c import CharLCD
 from threading import Timer
 from time import sleep
 
-from app.gpio.Keypad import Keypad
-from app.gpio.LCD import LCD
+
+lcd = CharLCD('PCF8574', 0x27)
+encoder = RotaryEncoder(a=17, b=27, max_steps=0)
+button = Button(22, pull_up=True)
+
+last_step = 0
+
+def get_encoder_delta():
+    global last_step
+    delta = encoder.steps - last_step
+    last_step = encoder.steps
+    lcd.cursor_pos = (3, 10)
+    lcd.write_string(f"{delta}   ")
+    return delta
 
 
-red = LED(14)
-lcd = LCD(21, 20, 26, 19, 6, 5)
-lcd_backlight = LED(18)
+red = LED(18)
+camera_light = PWMLED(14)
 
-lcd.write_string("Hello Raspberry")
-now = datetime.now()
-lcd.setCursor(1, 0)
-lcd.write_string(now.strftime('%d %b, %H:%M:%S'))
-lcd_backlight.on()
-keypad = Keypad(9, 10, 22, 27, 17, 4, 3, 2)
+lcd.clear()
+lcd.write_string("Hello Raspberry!")
+lcd.cursor_pos = (1, 0)
+lcd.write_string(datetime.now().strftime('%d %b, %H:%M:%S'))
 
 def updateClock():
     Timer(0.5, updateClock).start()
-    global now
-    now = datetime.now()
-    lcd.setCursor(1, 0)
-    lcd.write_string(now.strftime('%d %b, %H:%M:%S'))
+    lcd.cursor_pos = (1, 0)
+    lcd.write_string(datetime.now().strftime('%d %b, %H:%M:%S'))
 
 
 updateClock()
@@ -38,4 +46,4 @@ update_led()
 
 
 def gpio_loop():
-    return keypad.read()
+    get_encoder_delta()
