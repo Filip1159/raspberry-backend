@@ -34,7 +34,7 @@ class AlarmManager:
         self.__thread: threading.Thread | None = None
         self.__lock = threading.Lock()
         self.__stop_event = threading.Event()
-        self.__schedule: List[Dict] = []
+        self.schedule: List[Dict] = []
         self.player = melody_player
         self.reload()
 
@@ -43,8 +43,8 @@ class AlarmManager:
         with self.__lock:
             self.__stop_current_thread()
         
-            self.__schedule = load_schedule()
-            next_run, alarm = self.__find_next_run(self.__schedule)
+            self.schedule = load_schedule()
+            next_run, alarm = self.__find_next_run(self.schedule)
             self.__stop_event.clear()
 
             self.__thread = threading.Thread(
@@ -95,7 +95,7 @@ class AlarmManager:
             ).start()
 
             with self.__lock:
-                run_at, alarm = self.__find_next_run(self.__schedule)
+                run_at, alarm = self.__find_next_run(self.schedule)
     
 
     def __run_action_safe(self, alarm: Dict):
