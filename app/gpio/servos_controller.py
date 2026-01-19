@@ -28,10 +28,10 @@ MAX_DEVIATION = 30
 class ServosController:
     def __init__(self, v_channel, h_channel):
         self.vertical_servo = HardwarePWM(pwm_channel=v_channel, hz=50, chip=0)
-        self.vertical_servo_angle = V_CENTER
+        self.vertical_servo_angle = 0
         self.vertical_servo.start(to_pwm(V_CENTER))
         self.horizontal_servo = HardwarePWM(pwm_channel=h_channel, hz=50, chip=0)
-        self.horizontal_servo_angle = H_CENTER
+        self.horizontal_servo_angle = 0
         self.horizontal_servo.start(to_pwm(H_CENTER))
 
 
@@ -49,9 +49,9 @@ class ServosController:
             case Direction.LEFT:
                 self.try_go_left(1)
             case Direction.CENTER:
-                self.vertical_servo_angle = V_CENTER
+                self.vertical_servo_angle = 0
                 self.vertical_servo.change_duty_cycle(to_pwm(V_CENTER))
-                self.horizontal_servo_angle = H_CENTER
+                self.horizontal_servo_angle = 0
                 self.horizontal_servo.change_duty_cycle(to_pwm(H_CENTER))
             case Direction.RIGHT:
                 self.try_go_right(1)
@@ -66,31 +66,31 @@ class ServosController:
     
                 
     def try_go_up(self, diff):
-        new_angle = max(V_CENTER - MAX_DEVIATION, self.vertical_servo_angle - diff)
+        new_angle = max(-MAX_DEVIATION, self.vertical_servo_angle - diff)
         if self.vertical_servo_angle != new_angle:
             self.vertical_servo_angle = new_angle
-            self.vertical_servo.change_duty_cycle(to_pwm(self.vertical_servo_angle))
+            self.vertical_servo.change_duty_cycle(to_pwm(V_CENTER + self.vertical_servo_angle))
 
 
     def try_go_down(self, diff):
-        new_angle = min(V_CENTER + MAX_DEVIATION, self.vertical_servo_angle + diff)
+        new_angle = min(MAX_DEVIATION, self.vertical_servo_angle + diff)
         if self.vertical_servo_angle != new_angle:
             self.vertical_servo_angle = new_angle
-            self.vertical_servo.change_duty_cycle(to_pwm(self.vertical_servo_angle))
+            self.vertical_servo.change_duty_cycle(to_pwm(V_CENTER + self.vertical_servo_angle))
 
 
     def try_go_left(self, diff):
-        new_angle = min(H_CENTER + MAX_DEVIATION, self.horizontal_servo_angle + diff)
+        new_angle = min(MAX_DEVIATION, self.horizontal_servo_angle + diff)
         if self.horizontal_servo_angle != new_angle:
             self.horizontal_servo_angle = new_angle
-            self.horizontal_servo.change_duty_cycle(to_pwm(self.horizontal_servo_angle))
+            self.horizontal_servo.change_duty_cycle(to_pwm(H_CENTER + self.horizontal_servo_angle))
 
 
     def try_go_right(self, diff):
-        new_angle = max(H_CENTER - MAX_DEVIATION, self.horizontal_servo_angle - diff)
+        new_angle = max(-MAX_DEVIATION, self.horizontal_servo_angle - diff)
         if self.horizontal_servo_angle != new_angle:
             self.horizontal_servo_angle = new_angle
-            self.horizontal_servo.change_duty_cycle(to_pwm(self.horizontal_servo_angle))
+            self.horizontal_servo.change_duty_cycle(to_pwm(H_CENTER + self.horizontal_servo_angle))
 
 
 servos_controller = ServosController(0, 1)

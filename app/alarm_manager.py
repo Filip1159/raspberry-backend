@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import json
 from os import path
-import threading
+from threading import Event, Lock, Thread
 from time import sleep
 from typing import List, Dict
 
@@ -31,9 +31,9 @@ def load_schedule() -> List[Dict]:
 
 class AlarmManager:
     def __init__(self):
-        self.__thread: threading.Thread | None = None
-        self.__lock = threading.Lock()
-        self.__stop_event = threading.Event()
+        self.__waiting_thread: Thread | None = None
+        self.__lock = Lock()
+        self.__stop_event = Event()
         self.schedule: List[Dict] = []
         self.player = melody_player
         self.reload()
@@ -47,14 +47,24 @@ class AlarmManager:
             next_run, alarm = self.__find_next_run(self.schedule)
             self.__stop_event.clear()
 
-            self.__thread = threading.Thread(
+            self.__waiting_thread = Thread(
                 target=self.__run_and_reschedule,
                 args=(next_run, alarm, ),
                 daemon=True
             )
-            self.__thread.start()
+            self.__waiting_thread.start()
 
     
+    def save_day(self, new_alarm: Dict):
+        self.schedule = list(map(
+            lambda alarm: new_alarm if alarm['day'] == new_alarm['day'] else alarm,
+            self.schedule
+        ))
+        with open(ALARMS_FILE, "w", encoding="utf-8") as file:
+            json.dump(self.schedule, file, ensure_ascii=False, indent=2)
+        self.reload()
+
+
     def __find_next_run(self, schedule: List[Dict]) -> (datetime, Dict):
         now = datetime.now()
         candidates = []
@@ -88,27 +98,16 @@ class AlarmManager:
                 if stopped:
                     return
 
-            threading.Thread(
-                target=self.__run_action_safe,
-                args=(alarm, ),
-                daemon=True
-            ).start()
+            self.player.play(alarm['melody'])
 
             with self.__lock:
                 run_at, alarm = self.__find_next_run(self.schedule)
-    
-
-    def __run_action_safe(self, alarm: Dict):
-        try:
-            self.__player.play(alarm['melody'])
-        except Exception as e:
-            print("Alarm action failed:", e)
 
 
     def __stop_current_thread(self):
-        if self.__thread and self.__thread.is_alive():
+        if self.__waiting_thread and self.__waiting_thread.is_alive():
             self.__stop_event.set()
-            self.__thread.join()
+            self.__waiting_thread.join()
 
 
 alarm_manager = AlarmManager()

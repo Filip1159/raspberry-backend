@@ -1,10 +1,10 @@
 [
   {
     "day": "monday",
-    "hour": 9,
-    "minute": 0,
+    "hour": 10,
+    "minute": 15,
     "enabled": true,
-    "melody": "Pirates"
+    "melody": "Panic"
   },
   {
     "day": "tuesday",

@@ -1,5 +1,6 @@
 from gpiozero import Buzzer
 from time import sleep
+from threading import Event, Thread
 
 
 NOTE_TO_FREQ = {
@@ -199,11 +200,32 @@ MELODIES = {
 class MelodyPlayer():
     def __init__(self, buzzer_pin: int):
         self.__buzzer = Buzzer(buzzer_pin)
+        self.__player_thread: Thread | None = None
+        self.__stop_event = Event()
 
 
     def play(self, melody: str):
+        self.stop()
+        self.__stop_event.clear()
+        self.__player_thread = Thread(target=self.__play_notes, args=(melody, ), daemon=True)
+        self.__player_thread.start()
+
+
+    def stop(self):
+        if self.is_playing():
+            self.__stop_event.set()
+            self.__player_thread.join()
+    
+
+    def is_playing(self):
+        return self.__player_thread and self.__player_thread.is_alive()
+
+
+    def __play_notes(self, melody: str):
         notes = MELODIES[melody]
         for (note, duration) in notes:
+            if self.__stop_event.is_set():
+                return
             if note is None:
                 sleep(duration)
             else:
@@ -211,7 +233,7 @@ class MelodyPlayer():
                 sleep(duration * 0.1)
     
 
-    def __play_note(self, noteFreq, duration):
+    def __play_note(self, noteFreq: int, duration: float):
         halveWaveTime = 1 / (noteFreq * 2)
         waves = int(duration * noteFreq)
         for i in range(waves):

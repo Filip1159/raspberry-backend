@@ -2,118 +2,95 @@ from datetime import datetime
 from threading import Timer
 from RPLCD.i2c import CharLCD
 from gpiozero import Button, CPUTemperature, PWMLED, RotaryEncoder
+from time import sleep
 import psutil
 
 from app.gpio.servos_controller import ServosController
 from app.alarm_manager import AlarmManager
+from app.melody_player import MELODIES, MelodyPlayer
 
 
 class Navigation:
 
     def __init__(self, lcd: CharLCD, encoder: RotaryEncoder, encoder_button: Button, servos_controller: ServosController,
-                    camera_light: PWMLED, alarm_manager: AlarmManager):
+                    camera_light: PWMLED, alarm_manager: AlarmManager, melody_player: MelodyPlayer):
         self.__lcd = lcd
         self.__encoder = encoder
         self.__encoder_button = encoder_button
         self.__servos_controller = servos_controller
         self.__camera_light = camera_light
         self.__alarm_manager = alarm_manager
+        self.__melody_player = melody_player
         self.__selected_index = 0
+        self.__old_selected_index = 0
         self.__menu_offset = 0
         self.__last_encoder_step = 0
         self.__active_view = 'hello'
         self.__old_active_view = 'hello'
-        self.__old_selected_index = 0
         self.__scroll_alternative_function = None
+        self.__selected_alarm_day = None
+        self.__alarm_details_hour = None
+        self.__alarm_details_minute = None
+        self.__alarm_details_enabled = None
+        self.__alarm_details_melody = None
+
 
     def loop(self):
-        print(self.__scroll_alternative_function)
-        if self.__scroll_alternative_function is None:
-            if self.__active_view in [ 'menu', 'camera', 'alarms' ]:
-                delta = self.__encoder.steps - self.__last_encoder_step
-                self.__last_encoder_step = self.__encoder.steps
-                self.__selected_index = max(0, min(self.__selected_index + delta, self.__get_items_count() - 1))
+        delta = self.__encoder.steps - self.__last_encoder_step
+        self.__last_encoder_step = self.__encoder.steps
+        match self.__scroll_alternative_function:
+            case None:
+                if self.__active_view in [ 'menu', 'camera', 'alarms', 'alarm_details' ]:
+                    self.__selected_index = max(0, min(self.__selected_index + delta, self.__get_items_count() - 1))
+                    if self.__selected_index < self.__menu_offset:
+                        self.__menu_offset = self.__selected_index
+                    elif self.__selected_index >= self.__menu_offset + 4:
+                        self.__menu_offset = self.__selected_index - 3
+            case 'vertical':
+                if delta > 0:
+                    self.__servos_controller.try_go_up(delta)
+                elif delta < 0:
+                    self.__servos_controller.try_go_down(-delta)
+            case 'horizontal':
+                if delta > 0:
+                    self.__servos_controller.try_go_left(delta)
+                elif delta < 0:
+                    self.__servos_controller.try_go_right(-delta)
+            case 'brightness':
+                self.__camera_light.value = min(1, max(0, self.__camera_light.value + float(delta) / 10))
+            case 'set_hour':
+                self.__alarm_details_hour = (self.__alarm_details_hour + delta) % 24
+            case 'set_minute':
+                self.__alarm_details_minute = (self.__alarm_details_minute + delta) % 60
+            case 'alarm_melody':
+                melodies_list = list(MELODIES.keys())
+                melodies_list.sort()
+                current_melody_idx = melodies_list.index(self.__alarm_details_melody)
+                self.__alarm_details_melody = melodies_list[(current_melody_idx + delta) % len(melodies_list)]
 
-                if self.__selected_index < self.__menu_offset:
-                    self.__menu_offset = self.__selected_index
-                elif self.__selected_index >= self.__menu_offset + 4:
-                    self.__menu_offset = self.__selected_index - 3
-        elif self.__scroll_alternative_function == 'vertical':
-            delta = self.__encoder.steps - self.__last_encoder_step
-            self.__last_encoder_step = self.__encoder.steps
-            if delta > 0:
-                self.__servos_controller.try_go_up(delta)
-            elif delta < 0:
-                self.__servos_controller.try_go_down(-delta)
-        elif self.__scroll_alternative_function == 'horizontal':
-            delta = self.__encoder.steps - self.__last_encoder_step
-            self.__last_encoder_step = self.__encoder.steps
-            if delta > 0:
-                self.__servos_controller.try_go_left(delta)
-            elif delta < 0:
-                self.__servos_controller.try_go_right(-delta)
-        elif self.__scroll_alternative_function == 'brightness':
-            delta = self.__encoder.steps - self.__last_encoder_step
-            self.__last_encoder_step = self.__encoder.steps
-            self.__camera_light.value = min(1, max(0, self.__camera_light.value + float(delta) / 10))
-
-        if self.__active_view == 'hello':
-            self.__draw_hello_screen()
-        elif self.__active_view == 'menu':
-            self.__draw_menu()
-        elif self.__active_view == 'camera':
-            self.__draw_camera_control()
-        elif self.__active_view == 'alarms':
-            self.__draw_alarm_manager()
-        elif self.__active_view == 'stats':
-            self.__draw_system_stats()
-        else:
-            print('ERROR')
-    
-
-    def __draw_hello_screen(self):
-        if self.__old_active_view != 'hello':
-            self.__old_active_view = 'hello'
-            self.__lcd.clear()
-            self.__selected_index = 0
-
-        self.__draw_formatted_lcd_lines(self.__hello_content(), False)
-
-
-    def __draw_menu(self):
-        if self.__old_active_view != 'menu':
-            self.__old_active_view = 'menu'
-            self.__lcd.clear()
-            self.__selected_index = 0
-
-        self.__draw_formatted_lcd_lines(self.__menu_content(), True)
+        self.__draw_active_view()
 
     
-    def __draw_camera_control(self):
-        if self.__old_active_view != 'camera':
-            self.__old_active_view = 'camera'
+    def __draw_active_view(self):
+        if self.__old_active_view != self.__active_view:
+            self.__old_active_view = self.__active_view
             self.__lcd.clear()
             self.__selected_index = 0
-
-        self.__draw_formatted_lcd_lines(self.__camera_content(), True)
-
-    
-    def __draw_alarm_manager(self):
-        if self.__old_active_view != 'alarms':
-            self.__old_active_view = 'alarms'
-            self.__lcd.clear()
-            self.__selected_index = 0
+            self.__menu_offset = 0
         
-        self.__draw_formatted_lcd_lines(self.__alarms_content(), True)
-
-
-    def __draw_system_stats(self):
-        if self.__old_active_view != 'stats':
-            self.__old_active_view = 'stats'
-            self.__lcd.clear()
-            self.__selected_index = 0
-        
-        self.__draw_formatted_lcd_lines(self.__stats_content(), False)
+        match self.__active_view:
+            case 'hello':
+                self.__draw_formatted_lcd_lines(self.__hello_content(), False)
+            case 'menu':
+                self.__draw_formatted_lcd_lines(self.__menu_content(), True)
+            case 'camera':
+                self.__draw_formatted_lcd_lines(self.__camera_content(), True)
+            case 'alarms':
+                self.__draw_formatted_lcd_lines(self.__alarms_content(), True)
+            case 'alarm_details':
+                self.__draw_formatted_lcd_lines(self.__alarm_details_content(), True)
+            case 'stats':
+                self.__draw_formatted_lcd_lines(self.__stats_content(), False)
 
 
     def __draw_formatted_lcd_lines(self, content, scrollable: bool):
@@ -126,9 +103,10 @@ class Navigation:
             self.__lcd.cursor_pos = (i, 0)
             self.__lcd.write_string(prefix)
             formatted = content[item_index]['template'].format(*content[item_index]['args'])
-            self.__lcd.write_string(formatted.ljust(20))
+            self.__lcd.write_string(formatted.ljust(20 - len(prefix)))
 
-        self.__encoder_button.when_pressed = content[self.__selected_index]['action']
+        if self.__scroll_alternative_function is None:
+            self.__encoder_button.when_pressed = content[self.__selected_index]['action']
 
 
     def __hello_content(self):
@@ -142,7 +120,6 @@ class Navigation:
         return [ 
             { 'template': 'Camera', 'args': [], 'action': lambda: self.__set_active_view('camera') },
             { 'template': 'Alarms', 'args': [], 'action': lambda: self.__set_active_view('alarms') },
-            { 'template': 'Greetings', 'args': [], 'action': lambda: self.__set_active_view('greetings') },
             { 'template': 'System stats', 'args': [], 'action': lambda: self.__set_active_view('stats') },
             { 'template': '    <-', 'args': [], 'action': lambda: self.__set_active_view('hello') }
         ]
@@ -172,22 +149,64 @@ class Navigation:
 
     def __alarms_content(self):
         return [
-            { 'template': 'Monday       {}', 'args': [self.__format_alarm_time('monday')], 'action': lambda: None },
-            { 'template': 'Tuesday      {}', 'args': [self.__format_alarm_time('tuesday')], 'action': lambda: None },
-            { 'template': 'Wednesday    {}', 'args': [self.__format_alarm_time('wednesday')], 'action': lambda: None },
-            { 'template': 'Thursday     {}', 'args': [self.__format_alarm_time('thursday')], 'action': lambda: None },
-            { 'template': 'Friday       {}', 'args': [self.__format_alarm_time('friday')], 'action': lambda: None },
-            { 'template': 'Saturday     {}', 'args': [self.__format_alarm_time('saturday')], 'action': lambda: None },
-            { 'template': 'Sunday       {}', 'args': [self.__format_alarm_time('sunday')], 'action': lambda: None },
+            { 'template': 'Monday       {}', 'args': [self.__format_alarm_time('monday')], 'action': lambda: self.__set_active_alarm_details_view('Monday') },
+            { 'template': 'Tuesday      {}', 'args': [self.__format_alarm_time('tuesday')], 'action': lambda: self.__set_active_alarm_details_view('Tuesday') },
+            { 'template': 'Wednesday    {}', 'args': [self.__format_alarm_time('wednesday')], 'action': lambda: self.__set_active_alarm_details_view('Wednesday') },
+            { 'template': 'Thursday     {}', 'args': [self.__format_alarm_time('thursday')], 'action': lambda: self.__set_active_alarm_details_view('Thursday') },
+            { 'template': 'Friday       {}', 'args': [self.__format_alarm_time('friday')], 'action': lambda: self.__set_active_alarm_details_view('Friday') },
+            { 'template': 'Saturday     {}', 'args': [self.__format_alarm_time('saturday')], 'action': lambda: self.__set_active_alarm_details_view('Saturday') },
+            { 'template': 'Sunday       {}', 'args': [self.__format_alarm_time('sunday')], 'action': lambda: self.__set_active_alarm_details_view('Sunday') },
             { 'template': '    <-', 'args': [], 'action': lambda: self.__set_active_view('menu') }
+        ]
+    
+
+    def __alarm_details_content(self):
+        return [
+            { 'template': '{}   {}', 'args': [self.__selected_alarm_day, self.__format_alarm_time(self.__selected_alarm_day)], 'action': lambda: self.__set_scroll_alternative_function('set_hour') },
+            { 'template': '{}', 'args': [self.__format_alarm_enabled()], 'action': self.__toggle_alarm_enabled },
+            { 'template': '{}', 'args': [self.__alarm_details_melody], 'action': lambda: self.__set_scroll_alternative_function('alarm_melody') },
+            { 'template': '{}', 'args': ['Stop' if self.__melody_player.is_playing() else 'Play'], 'action': self.__play_stop_melody },
+            { 'template': 'Save', 'args': [], 'action': self.__save_alarm },
+            { 'template': '    <-', 'args': [], 'action': lambda: self.__set_active_view('alarms') }
         ]
 
 
+    def __play_stop_melody(self):
+        if self.__melody_player.is_playing():
+            self.__melody_player.stop()
+        else:
+            self.__melody_player.play(self.__alarm_details_melody)
+
+
+    def __save_alarm(self):
+        self.__alarm_manager.save_day({
+            'day': self.__selected_alarm_day.lower(),
+            'hour': self.__alarm_details_hour,
+            'minute': self.__alarm_details_minute,
+            'enabled': self.__alarm_details_enabled,
+            'melody': self.__alarm_details_melody
+        })
+
+
+    def __toggle_alarm_enabled(self):
+        self.__alarm_details_enabled = not self.__alarm_details_enabled
+
+
     def __format_alarm_time(self, day: str):
-        alarm = list(filter(lambda item: item['day'] == day, self.__alarm_manager.schedule))
-        if len(alarm) == 1 and alarm[0]['enabled']:
-            return f"{alarm[0]['hour']:02d}:{alarm[0]['minute']:02d}"
-        return "--:--"
+        day = day.lower()
+        if self.__active_view == 'alarms':
+            alarm = list(filter(lambda item: item['day'] == day, self.__alarm_manager.schedule))
+            if len(alarm) == 1 and alarm[0]['enabled']:
+                return f"{alarm[0]['hour']:02d}:{alarm[0]['minute']:02d}"
+            return "--:--"
+        elif self.__active_view == 'alarm_details':
+            return f"{self.__alarm_details_hour:02d}:{self.__alarm_details_minute:02d}"
+
+
+    def __format_alarm_enabled(self):
+        if self.__alarm_details_enabled:
+            return "Enabled"
+        return "Disabled"
 
     
     def __stats_content(self):
@@ -199,17 +218,35 @@ class Navigation:
 
     
     def __get_items_count(self):
-        if self.__active_view in [ 'menu', 'camera' ]:
+        if self.__active_view == 'menu':
+            return 4
+        if self.__active_view == 'camera':
             return 5
+        elif self.__active_view == 'alarm_details':
+            return 6
         elif self.__active_view == 'alarms':
             return 8
 
 
     def __set_active_view(self, view: str):
         self.__active_view = view
+    
+
+    def __set_active_alarm_details_view(self, day: str):
+        alarm = list(filter(lambda item: item['day'] == day.lower(), self.__alarm_manager.schedule))
+        self.__alarm_details_hour = alarm[0]['hour']
+        self.__alarm_details_minute = alarm[0]['minute']
+        self.__selected_alarm_day = day
+        self.__alarm_details_enabled = alarm[0]['enabled']
+        self.__alarm_details_melody = alarm[0]['melody']
+        self.__set_active_view('alarm_details')
 
     
     def __set_scroll_alternative_function(self, func: str|None):
+        self.__encoder_button.when_pressed = None
+        sleep(0.2)
         self.__scroll_alternative_function = func
-        if func is not None:
+        if func == 'set_hour':
+            self.__encoder_button.when_pressed = lambda: self.__set_scroll_alternative_function('set_minute')
+        elif func is not None:
             self.__encoder_button.when_pressed = lambda: self.__set_scroll_alternative_function(None)

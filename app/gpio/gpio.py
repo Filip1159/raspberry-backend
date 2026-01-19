@@ -4,6 +4,7 @@ from gpiozero import Button, CPUTemperature, LED, PWMLED, RotaryEncoder
 from threading import Timer, Thread
 from time import sleep
 from app.alarm_manager import alarm_manager
+from app.melody_player import melody_player
 from app.gpio.navigation import Navigation
 from app.gpio.servos_controller import servos_controller
 
@@ -14,7 +15,7 @@ lcd = CharLCD('PCF8574', 0x27)
 encoder = RotaryEncoder(a=17, b=27, max_steps=0)
 button = Button(22, pull_up=True)
 
-navigation = Navigation(lcd, encoder, button, servos_controller, camera_light, alarm_manager)
+navigation = Navigation(lcd, encoder, button, servos_controller, camera_light, alarm_manager, melody_player)
 
 def update_led():
     Timer(0.2, update_led).start()
