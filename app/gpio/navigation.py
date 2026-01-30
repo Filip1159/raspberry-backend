@@ -1,19 +1,20 @@
 from datetime import datetime
 from threading import Timer
 from RPLCD.i2c import CharLCD
-from gpiozero import Button, CPUTemperature, PWMLED, RotaryEncoder
+from gpiozero import Button, PWMLED, RotaryEncoder
 from time import sleep
-import psutil
 
+from app.bluetooth_manager import BluetoothManager
 from app.gpio.servos_controller import ServosController
 from app.alarm_manager import AlarmManager
 from app.melody_player import MELODIES, MelodyPlayer
+from app.system_stats import get_cpu_percent, get_cpu_temperature, get_ram_usage
 
 
 class Navigation:
 
     def __init__(self, lcd: CharLCD, encoder: RotaryEncoder, encoder_button: Button, servos_controller: ServosController,
-                    camera_light: PWMLED, alarm_manager: AlarmManager, melody_player: MelodyPlayer):
+                    camera_light: PWMLED, alarm_manager: AlarmManager, melody_player: MelodyPlayer, ble_manager: BluetoothManager):
         self.__lcd = lcd
         self.__encoder = encoder
         self.__encoder_button = encoder_button
@@ -21,6 +22,7 @@ class Navigation:
         self.__camera_light = camera_light
         self.__alarm_manager = alarm_manager
         self.__melody_player = melody_player
+        self.__ble_manager = ble_manager
         self.__selected_index = 0
         self.__old_selected_index = 0
         self.__menu_offset = 0
@@ -91,6 +93,8 @@ class Navigation:
                 self.__draw_formatted_lcd_lines(self.__alarm_details_content(), True)
             case 'stats':
                 self.__draw_formatted_lcd_lines(self.__stats_content(), False)
+            case 'ble_climate':
+                self.__draw_formatted_lcd_lines(self.__ble_climate_view_content(), False)
 
 
     def __draw_formatted_lcd_lines(self, content, scrollable: bool):
@@ -121,6 +125,7 @@ class Navigation:
             { 'template': 'Camera', 'args': [], 'action': lambda: self.__set_active_view('camera') },
             { 'template': 'Alarms', 'args': [], 'action': lambda: self.__set_active_view('alarms') },
             { 'template': 'System stats', 'args': [], 'action': lambda: self.__set_active_view('stats') },
+            { 'template': 'BLE climate', 'args': [], 'action': lambda: self.__set_active_view('ble_climate') },
             { 'template': '    <-', 'args': [], 'action': lambda: self.__set_active_view('hello') }
         ]
 
@@ -211,15 +216,40 @@ class Navigation:
     
     def __stats_content(self):
         return [ 
-            { 'template': 'CPU: {}%', 'args': [int(psutil.cpu_percent())], 'action': lambda: self.__set_active_view('menu') },
-            { 'template': 'CPU temp: {}' + chr(223) + 'C', 'args': [int(CPUTemperature().temperature)], 'action': lambda: self.__set_active_view('menu') },
-            { 'template': 'RAM usage: {}%', 'args': [int(psutil.virtual_memory().percent)], 'action': lambda: self.__set_active_view('menu') }
+            { 'template': 'CPU: {}%', 'args': [get_cpu_percent()], 'action': lambda: self.__set_active_view('menu') },
+            { 'template': 'CPU temp: {}' + chr(223) + 'C', 'args': [get_cpu_temperature()], 'action': lambda: self.__set_active_view('menu') },
+            { 'template': 'RAM usage: {}%', 'args': [get_ram_usage()], 'action': lambda: self.__set_active_view('menu') }
+        ]
+
+
+    def __ble_climate_view_content(self):
+        return [
+            { 
+                'template': 'Humidity: {}',
+                'args': [f'{self.__ble_manager.humidity}%' if self.__ble_manager.humidity is not None else '-'],
+                'action': lambda: self.__set_active_view('menu')
+            },
+            { 
+                'template': 'Temperature: {}',
+                'args': [f'{self.__ble_manager.temperature}{chr(223)}C' if self.__ble_manager.temperature is not None else '-'],
+                'action': lambda: self.__set_active_view('menu')
+            },
+            {
+                'template': 'Voltage: {}',
+                'args': [f'{self.__ble_manager.voltage}V' if self.__ble_manager.voltage is not None else '-'],
+                'action': lambda: self.__set_active_view('menu')
+            },
+            {
+                'template': 'Updated: {}',
+                'args': [self.__ble_manager.last_updated.strftime('%H:%M:%S') if self.__ble_manager.last_updated is not None else '-'],
+                'action': lambda: self.__set_active_view('menu')
+            }
         ]
 
     
     def __get_items_count(self):
         if self.__active_view == 'menu':
-            return 4
+            return 5
         if self.__active_view == 'camera':
             return 5
         elif self.__active_view == 'alarm_details':

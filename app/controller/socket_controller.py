@@ -18,12 +18,3 @@ def handle_message(msg):
         camera_light.value = float(msg[3:]) / 255
     else:
         servos_controller.move(msg)
-
-
-def server_loop(queue):
-    try:
-        message = queue.get(timeout=0.5)
-        socketio.emit('message', message)
-    except RuntimeError as error:
-        print(f"Exception in server loop: {error}")
-        pass
